@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>우리 가족 통합 일정표</title>
+  <title>ORGANIZING OUR FAMILY</title>
   <style>
     :root {
       --header-bg: #2C3E50;
@@ -23,6 +23,12 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
+    }
+    .site-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
     }
     .nav { display: flex; align-items: center; gap: 8px; }
     .nav button {
@@ -44,6 +50,7 @@
     .grid-wrap { overflow-y: auto; max-height: calc(100vh - 140px); }
     table.calendar { width: 100%; min-width: 900px; border-collapse: collapse; background: #fff; table-layout: fixed; }
     table.calendar th, table.calendar td { border: 1px solid var(--border); padding: 4px; vertical-align: top; }
+    table.calendar thead th { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 var(--border); }
     table.calendar th.day-header { background: var(--cell-bg); font-weight: bold; text-align: center; padding: 8px; font-size: 12px; }
     table.calendar th.day-header.today { background: var(--today-bg); }
     table.calendar th.time-col { width: 64px; background: var(--time-bg); font-size: 11px; text-align: center; padding: 8px 4px; }
@@ -76,6 +83,7 @@
 </head>
 <body>
   <header class="header">
+    <h1 class="site-title">ORGANIZING OUR FAMILY</h1>
     <div class="nav">
       <button type="button" id="btnPrevMonth">&laquo;</button>
       <button type="button" id="btnPrevWeek">&lt;</button>
@@ -117,8 +125,10 @@
       <h3 id="modalTitle">일정 추가</h3>
       <label>일정 내용</label>
       <input type="text" id="inputContent" placeholder="예: 영어 수업">
-      <label>종료 시간 (여러 시간 통합 시, 예: 12:00) — 1시간만 쓰려면 비우기</label>
-      <input type="text" id="inputEndTime" placeholder="예: 12:00 또는 12">
+      <label>종료 시간 (여러 시간 통합 시, 예: 16:00) — 1시간만 쓰려면 비우기</label>
+      <input type="text" id="inputEndTime" placeholder="예: 16:00 또는 16">
+      <label>메모 (선택)</label>
+      <input type="text" id="inputMemo" placeholder="메모">
       <div class="who-group">
         <span>작성자:</span>
         <label style="background:#BBDEFB;"><input type="radio" name="modalWriter" value="아빠" checked> 아빠</label>
@@ -138,6 +148,12 @@
       <h3 id="editModalTitle">일정 수정</h3>
       <label>일정 내용</label>
       <input type="text" id="editContent" placeholder="일정 내용">
+      <label>메모 (선택)</label>
+      <input type="text" id="editMemo" placeholder="메모">
+      <label>시작 시간</label>
+      <input type="text" id="editStartTime" readonly placeholder="시작">
+      <label>종료 시간 (변경 시 입력, 예: 16:00)</label>
+      <input type="text" id="editEndTime" placeholder="예: 16:00">
       <div class="who-group">
         <span>작성자:</span>
         <label style="background:#BBDEFB;"><input type="radio" name="editWriter" value="아빠"> 아빠</label>
@@ -164,6 +180,7 @@
     let calendarData = {};
     let addCell = null;
     let editingKey = null, editingIndex = null, editingEventId = null;
+    let editingDateStr = null, editingStartRow = null;
 
     function setViewDateToWeekStart(d) {
       const date = new Date(d);
@@ -321,6 +338,7 @@
       document.getElementById('modalTitle').textContent = '일정 추가 — ' + dateStr + ' ' + TIMES[row];
       document.getElementById('inputContent').value = '';
       document.getElementById('inputEndTime').value = '';
+      document.getElementById('inputMemo').value = '';
       var headerWriter = document.querySelector('input[name="writer"]:checked');
       if (headerWriter) {
         var modalWriter = document.querySelector('input[name="modalWriter"][value="' + headerWriter.value + '"]');
@@ -340,6 +358,7 @@
       const content = document.getElementById('inputContent').value.trim();
       if (!content) return;
       const endTime = document.getElementById('inputEndTime').value.trim();
+      const memo = document.getElementById('inputMemo').value.trim();
       const who = document.querySelector('input[name="modalWriter"]:checked').value;
       const d = new Date(viewDate);
       d.setDate(d.getDate() + addCell.col);
@@ -353,7 +372,8 @@
           time_index: addCell.row,
           end_time: endTime,
           who: who,
-          content: content
+          content: content,
+          memo: memo
         })
       });
       const result = await res.json();
@@ -381,6 +401,19 @@
 
       var content = (ev.text || '').replace(/^[^:]+:\s*/, '').replace(/\s*\(\d{2}:\d{2}~\d{2}:\d{2}\)\s*$/, '').trim();
       document.getElementById('editContent').value = content;
+      document.getElementById('editMemo').value = ev.memo || '';
+      var dateStr = key.substring(0, 10);
+      var startTimeVal = '';
+      var endTimeVal = '';
+      if (eventId) {
+        var span = getEventSpan(eventId, dateStr);
+        editingDateStr = dateStr;
+        editingStartRow = span.startRow;
+        startTimeVal = TIMES[span.startRow] || '';
+        endTimeVal = span.endRow < TIMES.length ? TIMES[span.endRow] : (TIMES[span.endRow - 1] || '');
+      }
+      document.getElementById('editStartTime').value = startTimeVal;
+      document.getElementById('editEndTime').value = endTimeVal;
       var editWriterEl = document.querySelector('input[name="editWriter"][value="' + (ev.who || '아빠') + '"]');
       if (editWriterEl) editWriterEl.checked = true;
 
@@ -393,6 +426,8 @@
       editingKey = null;
       editingIndex = null;
       editingEventId = null;
+      editingDateStr = null;
+      editingStartRow = null;
     }
 
     async function submitEdit() {
@@ -400,17 +435,25 @@
       const content = document.getElementById('editContent').value.trim();
       if (!content) return;
       const who = document.querySelector('input[name="editWriter"]:checked').value;
-
+      const memo = document.getElementById('editMemo').value.trim();
+      const endTime = document.getElementById('editEndTime').value.trim();
+      const payload = {
+        key: editingKey,
+        index: editingIndex,
+        event_id: editingEventId || undefined,
+        content: content,
+        who: who,
+        memo: memo
+      };
+      if (editingEventId && editingDateStr != null && editingStartRow != null) {
+        payload.date_str = editingDateStr;
+        payload.start_time_index = editingStartRow;
+        payload.end_time = endTime;
+      }
       const res = await fetch('/api/event/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: editingKey,
-          index: editingIndex,
-          event_id: editingEventId || undefined,
-          content: content,
-          who: who
-        })
+        body: JSON.stringify(payload)
       });
       const result = await res.json();
       if (result.ok) {
