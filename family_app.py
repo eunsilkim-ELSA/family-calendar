@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Organizing our family! - Flask 서버"""
+"""가족 통합 일정표 웹 대시보드 - Flask 서버"""
 import os
 import json
 import time
@@ -14,8 +14,8 @@ app = Flask(__name__, template_folder=TEMPLATES_DIR)
 MEMBERS = {
     "아빠": "#BBDEFB",
     "엄마": "#F8BBD0",
-    "첫째": "#FFE0B2",
-    "둘째": "#C8E6C9"
+    "수현": "#FFE0B2",
+    "태현": "#C8E6C9"
 }
 DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"]
 TIMES = [f"{h:02d}:00" for h in range(6, 25)]
