@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>우리 가족 통합 일정표</title>
+  <title>Organizing our family!</title>
   <style>
     :root {
       --header-bg: #2C3E50;
@@ -35,112 +35,42 @@
       color: #fff;
     }
     .nav button:hover { background: #1abc9c; }
-    .nav .week-label {
-      font-size: 16px;
-      font-weight: bold;
-      min-width: 180px;
-      text-align: center;
-    }
+    .nav .week-label { font-size: 16px; font-weight: bold; min-width: 180px; text-align: center; }
     .writers { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .writers span { margin-right: 4px; font-size: 13px; }
-    .writers label {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    .writers label { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
     .writers input { margin-right: 4px; }
     .container { padding: 16px; overflow-x: auto; }
     .grid-wrap { overflow-y: auto; max-height: calc(100vh - 140px); }
-    table.calendar {
-      width: 100%;
-      min-width: 900px;
-      border-collapse: collapse;
-      background: #fff;
-      table-layout: fixed;
-    }
+    table.calendar { width: 100%; min-width: 900px; border-collapse: collapse; background: #fff; table-layout: fixed; }
     table.calendar th, table.calendar td { border: 1px solid var(--border); padding: 4px; vertical-align: top; }
-    table.calendar th.day-header {
-      background: var(--cell-bg);
-      font-weight: bold;
-      text-align: center;
-      padding: 8px;
-      font-size: 12px;
-    }
+    table.calendar th.day-header { background: var(--cell-bg); font-weight: bold; text-align: center; padding: 8px; font-size: 12px; }
     table.calendar th.day-header.today { background: var(--today-bg); }
-    table.calendar th.time-col {
-      width: 64px;
-      background: var(--time-bg);
-      font-size: 11px;
-      text-align: center;
-      padding: 8px 4px;
-    }
-    table.calendar td.cell {
-      min-height: 48px;
-      height: 48px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
+    table.calendar th.time-col { width: 64px; background: var(--time-bg); font-size: 11px; text-align: center; padding: 8px 4px; }
+    table.calendar td.cell { min-height: 48px; height: 48px; cursor: pointer; transition: background 0.15s; vertical-align: top; }
     table.calendar td.cell:hover { background: #e8f4f8; }
     .event-btn {
-      display: block;
-      width: 100%;
-      margin: 2px 0;
-      padding: 4px 6px;
-      font-size: 11px;
-      text-align: left;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      display: block; width: 100%; margin: 2px 0; padding: 4px 6px; font-size: 11px; text-align: left;
+      border: none; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .event-btn:hover { opacity: 0.9; filter: brightness(0.95); }
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
     .modal-overlay.show { display: flex; }
-    .modal {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      min-width: 320px;
-      max-width: 90vw;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
+    .modal { background: #fff; border-radius: 8px; padding: 20px; min-width: 320px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
     .modal h3 { margin-top: 0; margin-bottom: 16px; font-size: 16px; }
     .modal label { display: block; margin-bottom: 4px; font-size: 13px; }
-    .modal input[type="text"], .modal select { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; }
+    .modal input[type="text"] { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; }
     .modal .who-group { margin-bottom: 12px; }
     .modal .who-group label { display: inline-flex; margin-right: 8px; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .modal .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .modal .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
     .modal .btns button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
     .modal .btns .submit { background: #3498db; color: #fff; }
     .modal .btns .submit:hover { background: #2980b9; }
     .modal .btns .cancel { background: #95a5a6; color: #fff; }
     .modal .btns .cancel:hover { background: #7f8c8d; }
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      background: #27ae60;
-      color: #fff;
-      border-radius: 6px;
-      display: none;
-      z-index: 1001;
-    }
+    .modal .btns .delete { background: #e74c3c; color: #fff; }
+    .modal .btns .delete:hover { background: #c0392b; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: #27ae60; color: #fff; border-radius: 6px; display: none; z-index: 1001; }
     .toast.show { display: block; }
   </style>
 </head>
@@ -203,6 +133,26 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3 id="editModalTitle">일정 수정</h3>
+      <label>일정 내용</label>
+      <input type="text" id="editContent" placeholder="일정 내용">
+      <div class="who-group">
+        <span>작성자:</span>
+        <label style="background:#BBDEFB;"><input type="radio" name="editWriter" value="아빠"> 아빠</label>
+        <label style="background:#F8BBD0;"><input type="radio" name="editWriter" value="엄마"> 엄마</label>
+        <label style="background:#FFE0B2;"><input type="radio" name="editWriter" value="첫째"> 첫째</label>
+        <label style="background:#C8E6C9;"><input type="radio" name="editWriter" value="둘째"> 둘째</label>
+      </div>
+      <div class="btns">
+        <button type="button" class="delete" id="btnEditDelete">삭제</button>
+        <button type="button" class="cancel" id="btnEditCancel">취소</button>
+        <button type="button" class="submit" id="btnEditSubmit">수정</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -213,6 +163,7 @@
     let viewDate = null;
     let calendarData = {};
     let addCell = null;
+    let editingKey = null, editingIndex = null, editingEventId = null;
 
     function setViewDateToWeekStart(d) {
       const date = new Date(d);
@@ -250,6 +201,24 @@
       return calendarData;
     }
 
+    function getEventSpan(eventId, dateStr) {
+      let startRow = TIMES.length, endRow = 0;
+      for (let r = 0; r < TIMES.length; r++) {
+        const key = dateStr + '_' + TIMES[r];
+        const events = calendarData[key];
+        if (events && Array.isArray(events)) {
+          for (const ev of events) {
+            if (ev && ev.event_id === eventId) {
+              if (r < startRow) startRow = r;
+              if (r + 1 > endRow) endRow = r + 1;
+              break;
+            }
+          }
+        }
+      }
+      return { startRow: startRow === TIMES.length ? 0 : startRow, endRow: endRow };
+    }
+
     function renderHeaders() {
       const thead = document.querySelector('#calendarTable thead tr');
       const timeCol = thead.querySelector('.time-col');
@@ -270,42 +239,75 @@
     function renderBody() {
       const tbody = document.getElementById('calendarBody');
       tbody.innerHTML = '';
+      const coveredUntil = [0, 0, 0, 0, 0, 0, 0];
+
       for (let i = 0; i < TIMES.length; i++) {
         const tr = document.createElement('tr');
         const th = document.createElement('th');
         th.className = 'time-col';
         th.textContent = TIMES[i];
         tr.appendChild(th);
+
         for (let j = 0; j < 7; j++) {
+          if (i < coveredUntil[j]) continue;
+
           const d = new Date(viewDate);
           d.setDate(d.getDate() + j);
           const dateStr = formatDate(d);
           const key = dateStr + '_' + TIMES[i];
+          const events = calendarData[key] || [];
+
+          let eventsToShow = [];
+          let rowspan = 1;
+
+          for (const ev of events) {
+            if (typeof ev !== 'object') continue;
+            if (ev.event_id) {
+              const span = getEventSpan(ev.event_id, dateStr);
+              if (i === span.startRow) {
+                const startKey = dateStr + '_' + TIMES[span.startRow];
+                const startEvents = calendarData[startKey] || [];
+                let idx = 0;
+                for (let k = 0; k < startEvents.length; k++) {
+                  if (startEvents[k] && startEvents[k].event_id === ev.event_id) { idx = k; break; }
+                }
+                eventsToShow.push({ ev, keyForBtn: startKey, indexInKey: idx });
+                rowspan = Math.max(rowspan, span.endRow - span.startRow);
+              }
+            } else {
+              eventsToShow.push({ ev, keyForBtn: key, indexInKey: events.indexOf(ev) });
+            }
+          }
+
+          if (eventsToShow.length === 0) {
+            rowspan = 1;
+          }
+
           const td = document.createElement('td');
           td.className = 'cell';
+          td.rowSpan = rowspan;
           td.dataset.row = i;
           td.dataset.col = j;
-          const events = calendarData[key];
-          if (events && Array.isArray(events)) {
-            events.forEach((ev, idx) => {
-              if (typeof ev !== 'object') return;
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'event-btn';
-              btn.textContent = ev.text || '';
-              btn.style.background = ev.bg || '#ddd';
-              btn.dataset.key = key;
-              btn.dataset.index = idx;
-              btn.dataset.eventId = ev.event_id || '';
-              btn.addEventListener('click', function(e) { e.stopPropagation(); deleteEvent(this); });
-              td.appendChild(btn);
-            });
+
+          for (const item of eventsToShow) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'event-btn';
+            btn.textContent = item.ev.text || '';
+            btn.style.background = item.ev.bg || '#ddd';
+            btn.dataset.key = item.keyForBtn;
+            btn.dataset.index = item.indexInKey;
+            btn.dataset.eventId = item.ev.event_id || '';
+            btn.addEventListener('click', function(e) { e.stopPropagation(); openEditModal(this); });
+            td.appendChild(btn);
           }
+
           td.addEventListener('click', function(e) {
             if (e.target.classList.contains('event-btn')) return;
             openAddModal(parseInt(this.dataset.row, 10), parseInt(this.dataset.col, 10));
           });
           tr.appendChild(td);
+          coveredUntil[j] = i + rowspan;
         }
         tbody.appendChild(tr);
       }
@@ -319,6 +321,11 @@
       document.getElementById('modalTitle').textContent = '일정 추가 — ' + dateStr + ' ' + TIMES[row];
       document.getElementById('inputContent').value = '';
       document.getElementById('inputEndTime').value = '';
+      var headerWriter = document.querySelector('input[name="writer"]:checked');
+      if (headerWriter) {
+        var modalWriter = document.querySelector('input[name="modalWriter"][value="' + headerWriter.value + '"]');
+        if (modalWriter) modalWriter.checked = true;
+      }
       document.getElementById('addModal').classList.add('show');
       document.getElementById('inputContent').focus();
     }
@@ -360,6 +367,84 @@
       }
     }
 
+    function openEditModal(btn) {
+      const key = btn.dataset.key;
+      const index = parseInt(btn.dataset.index, 10);
+      const eventId = btn.dataset.eventId || '';
+      const events = calendarData[key];
+      if (!events || !events[index]) return;
+      const ev = events[index];
+
+      editingKey = key;
+      editingIndex = index;
+      editingEventId = eventId || null;
+
+      var content = (ev.text || '').replace(/^[^:]+:\s*/, '').replace(/\s*\(\d{2}:\d{2}~\d{2}:\d{2}\)\s*$/, '').trim();
+      document.getElementById('editContent').value = content;
+      var editWriterEl = document.querySelector('input[name="editWriter"][value="' + (ev.who || '아빠') + '"]');
+      if (editWriterEl) editWriterEl.checked = true;
+
+      document.getElementById('editModal').classList.add('show');
+      document.getElementById('editContent').focus();
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('show');
+      editingKey = null;
+      editingIndex = null;
+      editingEventId = null;
+    }
+
+    async function submitEdit() {
+      if (!editingKey) return;
+      const content = document.getElementById('editContent').value.trim();
+      if (!content) return;
+      const who = document.querySelector('input[name="editWriter"]:checked').value;
+
+      const res = await fetch('/api/event/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: editingKey,
+          index: editingIndex,
+          event_id: editingEventId || undefined,
+          content: content,
+          who: who
+        })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        calendarData = result.data;
+        closeEditModal();
+        renderBody();
+        showToast('일정이 수정되었습니다.');
+      } else {
+        showToast('수정 실패.');
+      }
+    }
+
+    async function deleteFromEditModal() {
+      if (!confirm('선택한 일정을 삭제할까요?')) return;
+      const key = editingKey;
+      const index = editingIndex;
+      const eventId = editingEventId || '';
+
+      const res = await fetch('/api/event/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventId ? { event_id: eventId } : { key, index })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        calendarData = result.data;
+        closeEditModal();
+        renderBody();
+        showToast('삭제되었습니다.');
+      } else {
+        showToast('삭제 실패.');
+      }
+    }
+
     async function deleteEvent(btn) {
       const key = btn.dataset.key;
       const index = parseInt(btn.dataset.index, 10);
@@ -385,29 +470,13 @@
       const el = document.getElementById('toast');
       el.textContent = msg;
       el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 2000);
+      setTimeout(function() { el.classList.remove('show'); }, 2000);
     }
 
-    function goPrevWeek() {
-      viewDate.setDate(viewDate.getDate() - 7);
-      renderHeaders();
-      renderBody();
-    }
-    function goNextWeek() {
-      viewDate.setDate(viewDate.getDate() + 7);
-      renderHeaders();
-      renderBody();
-    }
-    function goPrevMonth() {
-      viewDate.setMonth(viewDate.getMonth() - 1);
-      renderHeaders();
-      renderBody();
-    }
-    function goNextMonth() {
-      viewDate.setMonth(viewDate.getMonth() + 1);
-      renderHeaders();
-      renderBody();
-    }
+    function goPrevWeek() { viewDate.setDate(viewDate.getDate() - 7); renderHeaders(); renderBody(); }
+    function goNextWeek() { viewDate.setDate(viewDate.getDate() + 7); renderHeaders(); renderBody(); }
+    function goPrevMonth() { viewDate.setMonth(viewDate.getMonth() - 1); renderHeaders(); renderBody(); }
+    function goNextMonth() { viewDate.setMonth(viewDate.getMonth() + 1); renderHeaders(); renderBody(); }
 
     document.getElementById('btnPrevMonth').addEventListener('click', goPrevMonth);
     document.getElementById('btnPrevWeek').addEventListener('click', goPrevWeek);
@@ -415,9 +484,11 @@
     document.getElementById('btnNextMonth').addEventListener('click', goNextMonth);
     document.getElementById('btnModalCancel').addEventListener('click', closeAddModal);
     document.getElementById('btnModalSubmit').addEventListener('click', submitAdd);
-    document.getElementById('inputContent').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') submitAdd();
-    });
+    document.getElementById('inputContent').addEventListener('keydown', function(e) { if (e.key === 'Enter') submitAdd(); });
+    document.getElementById('btnEditCancel').addEventListener('click', closeEditModal);
+    document.getElementById('btnEditSubmit').addEventListener('click', submitEdit);
+    document.getElementById('btnEditDelete').addEventListener('click', deleteFromEditModal);
+    document.getElementById('editContent').addEventListener('keydown', function(e) { if (e.key === 'Enter') submitEdit(); });
 
     (async function init() {
       setViewDateToWeekStart(new Date());
@@ -428,3 +499,4 @@
   </script>
 </body>
 </html>
+

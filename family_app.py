@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
-"""가족 통합 일정표 웹 대시보드 - Flask 서버"""
+"""Organizing our family! - Flask 서버"""
 import os
 import json
 import time
 from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__)
+# templates 폴더 경로를 family_app.py와 같은 위치로 고정 (Render 등에서 오류 방지)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+app = Flask(__name__, template_folder=TEMPLATES_DIR)
 
 MEMBERS = {
     "아빠": "#BBDEFB",
@@ -16,7 +20,6 @@ MEMBERS = {
 DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"]
 TIMES = [f"{h:02d}:00" for h in range(6, 25)]
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "family_pro_data.json")
 
 
@@ -145,8 +148,62 @@ def api_delete_event():
     return jsonify({"ok": True, "data": load_data()})
 
 
+@app.route("/api/event/update", methods=["POST"])
+def api_update_event():
+    data = load_data()
+    payload = request.get_json() or {}
+    key = payload.get("key")
+    index = payload.get("index", -1)
+    event_id = payload.get("event_id")
+    content = payload.get("content", "").strip()
+    who = payload.get("who", "아빠")
+
+    if who not in MEMBERS:
+        who = "아빠"
+    if not content:
+        return jsonify({"ok": False, "error": "invalid_input"}), 400
+
+    def update_event_text_bg(ev, new_content, new_who):
+        # 기존 시간대 문자열 유지 (예: " (09:00~12:00)")
+        text = ev.get("text", "")
+        time_suffix = ""
+        if " (" in text and "~" in text and ")" in text:
+            idx = text.rfind(" (")
+            if idx >= 0:
+                time_suffix = text[idx:]
+        ev["text"] = f"{new_who}: {new_content}{time_suffix}"
+        ev["who"] = new_who
+        ev["bg"] = MEMBERS[new_who]
+
+    if event_id:
+        for k in list(data.keys()):
+            if not isinstance(data.get(k), list):
+                continue
+            for ev in data[k]:
+                if ev.get("event_id") == event_id:
+                    update_event_text_bg(ev, content, who)
+        save_data(data)
+        return jsonify({"ok": True, "data": load_data()})
+
+    if key and key in data and isinstance(data[key], list) and 0 <= index < len(data[key]):
+        ev = data[key][index]
+        eid = ev.get("event_id")
+        if eid:
+            for k in list(data.keys()):
+                if not isinstance(data.get(k), list):
+                    continue
+                for e in data[k]:
+                    if e.get("event_id") == eid:
+                        update_event_text_bg(e, content, who)
+        else:
+            update_event_text_bg(ev, content, who)
+        save_data(data)
+        return jsonify({"ok": True, "data": load_data()})
+
+    return jsonify({"ok": False, "error": "invalid_input"}), 400
+
+
 if __name__ == "__main__":
-    import os
     PORT = int(os.environ.get("PORT", 8080))
     print("")
     print("=" * 50)
