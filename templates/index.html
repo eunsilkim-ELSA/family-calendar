@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>우리 가족 통합 일정표</title>
+  <title>Organizing Our Family</title>
   <style>
     :root {
       --header-bg: #2C3E50;
@@ -157,8 +157,8 @@
       <span>작성자:</span>
       <label style="background:#BBDEFB;"><input type="radio" name="writer" value="아빠" checked> 아빠</label>
       <label style="background:#F8BBD0;"><input type="radio" name="writer" value="엄마"> 엄마</label>
-      <label style="background:#FFE0B2;"><input type="radio" name="writer" value="첫째"> 첫째</label>
-      <label style="background:#C8E6C9;"><input type="radio" name="writer" value="둘째"> 둘째</label>
+      <label style="background:#FFE0B2;"><input type="radio" name="writer" value="수현"> 수현</label>
+      <label style="background:#C8E6C9;"><input type="radio" name="writer" value="태현"> 태현</label>
     </div>
   </header>
 
@@ -193,8 +193,8 @@
         <span>작성자:</span>
         <label style="background:#BBDEFB;"><input type="radio" name="modalWriter" value="아빠" checked> 아빠</label>
         <label style="background:#F8BBD0;"><input type="radio" name="modalWriter" value="엄마"> 엄마</label>
-        <label style="background:#FFE0B2;"><input type="radio" name="modalWriter" value="첫째"> 첫째</label>
-        <label style="background:#C8E6C9;"><input type="radio" name="modalWriter" value="둘째"> 둘째</label>
+        <label style="background:#FFE0B2;"><input type="radio" name="modalWriter" value="수현"> 수현</label>
+        <label style="background:#C8E6C9;"><input type="radio" name="modalWriter" value="태현"> 태현</label>
       </div>
       <div class="btns">
         <button type="button" class="cancel" id="btnModalCancel">취소</button>
@@ -208,7 +208,7 @@
   <script>
     const DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
     const TIMES = ["06:00","07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00","24:00"];
-    const MEMBERS = {"아빠":"#BBDEFB","엄마":"#F8BBD0","첫째":"#FFE0B2","둘째":"#C8E6C9"};
+    const MEMBERS = {"아빠":"#BBDEFB","엄마":"#F8BBD0","수현":"#FFE0B2","태현":"#C8E6C9"};
 
     let viewDate = null;
     let calendarData = {};
