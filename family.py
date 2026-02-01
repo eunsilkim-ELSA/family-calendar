@@ -9,8 +9,8 @@ import os  # 경로 설정을 위해 추가됨
 MEMBERS = {
     "아빠": "#BBDEFB", 
     "엄마": "#F8BBD0", 
-    "첫째": "#FFE0B2", 
-    "둘째": "#C8E6C9"
+    "수현": "#FFE0B2", 
+    "태현": "#C8E6C9"
 }
 DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"]
 TIMES = [f"{h:02d}:00" for h in range(6, 25)]
@@ -18,7 +18,7 @@ TIMES = [f"{h:02d}:00" for h in range(6, 25)]
 class FamilyCalendar:
     def __init__(self, root):
         self.root = root
-        self.root.title("우리 가족 통합 일정표 v14.0")
+        self.root.title("Organizing Our Family v14.0")
         self.root.geometry("1200x950")
         
         # 파일 경로 설정 (이 부분이 수정되었습니다)
