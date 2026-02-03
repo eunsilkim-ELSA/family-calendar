@@ -64,6 +64,7 @@
     }
     .event-btn:hover { opacity: 0.9; filter: brightness(0.95); }
     .event-row-wrap { box-sizing: border-box; min-height: 100%; }
+    .event-row-wrap .event-btn { box-sizing: border-box; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; border-radius: 8px; padding: 20px; min-width: 320px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
@@ -306,15 +307,62 @@
       return lanes;
     }
 
-    /** 해당 요일·해당 행에서 시작하는 이벤트 목록 (lane 없이). */
-    function getStartersByRow(events) {
-      const byRow = [];
-      for (let r = 0; r < TIMES.length; r++) byRow[r] = [];
-      for (let k = 0; k < events.length; k++) {
-        const item = events[k];
-        byRow[item.startRow].push({ startRow: item.startRow, endRow: item.endRow, ev: item.ev, keyForBtn: item.keyForBtn, indexInKey: item.indexInKey });
+    /** 시간이 겹치는 이벤트끼리 묶어서 블록 배열로 반환. 각 블록: { startRow, endRow, events[] }. */
+    function buildOverlapBlocks(events) {
+      if (events.length === 0) return [];
+      const sorted = events.slice().sort(function(a, b) { return a.startRow - b.startRow; });
+      let blocks = [];
+      for (let k = 0; k < sorted.length; k++) {
+        const item = sorted[k];
+        let found = false;
+        for (let b = 0; b < blocks.length; b++) {
+          const block = blocks[b];
+          if (item.startRow < block.endRow && block.startRow < item.endRow) {
+            block.events.push(item);
+            if (item.endRow > block.endRow) block.endRow = item.endRow;
+            if (item.startRow < block.startRow) block.startRow = item.startRow;
+            found = true;
+            break;
+          }
+        }
+        if (!found) blocks.push({ startRow: item.startRow, endRow: item.endRow, events: [item] });
       }
-      return byRow;
+      for (;;) {
+        let merged = false;
+        for (let a = 0; a < blocks.length; a++) {
+          for (let b = a + 1; b < blocks.length; b++) {
+            if (blocks[a].startRow < blocks[b].endRow && blocks[b].startRow < blocks[a].endRow) {
+              blocks[a].events = blocks[a].events.concat(blocks[b].events);
+              blocks[a].startRow = Math.min(blocks[a].startRow, blocks[b].startRow);
+              blocks[a].endRow = Math.max(blocks[a].endRow, blocks[b].endRow);
+              blocks.splice(b, 1);
+              merged = true;
+              break;
+            }
+          }
+          if (merged) break;
+        }
+        if (!merged) break;
+      }
+      return blocks;
+    }
+
+    /** 요일별로 '이 행에서 시작하는 블록' 맵 생성. blocksByStart[j][startRow] = block */
+    function getBlocksByStartPerDay() {
+      const blocksByStart = [];
+      for (let j = 0; j < 7; j++) {
+        const d = new Date(viewDate);
+        d.setDate(d.getDate() + j);
+        const dateStr = formatDate(d);
+        const events = getEventsForDate(dateStr);
+        const blocks = buildOverlapBlocks(events);
+        const byStart = [];
+        for (let b = 0; b < blocks.length; b++) {
+          byStart[blocks[b].startRow] = blocks[b];
+        }
+        blocksByStart.push(byStart);
+      }
+      return blocksByStart;
     }
 
     function renderHeaders() {
@@ -337,14 +385,7 @@
     function renderBody() {
       const tbody = document.getElementById('calendarBody');
       tbody.innerHTML = '';
-      const startEvents = [];
-      for (let j = 0; j < 7; j++) {
-        const d = new Date(viewDate);
-        d.setDate(d.getDate() + j);
-        const dateStr = formatDate(d);
-        const events = getEventsForDate(dateStr);
-        startEvents.push(getStartersByRow(events));
-      }
+      const blocksByStart = getBlocksByStartPerDay();
       const coveredUntil = [0, 0, 0, 0, 0, 0, 0];
 
       for (let i = 0; i < TIMES.length; i++) {
@@ -357,25 +398,19 @@
         for (let j = 0; j < 7; j++) {
           if (i < coveredUntil[j]) continue;
 
-          const d = new Date(viewDate);
-          d.setDate(d.getDate() + j);
-          const starters = startEvents[j][i] || [];
+          const block = blocksByStart[j][i];
           const td = document.createElement('td');
           td.className = 'cell';
           td.dataset.row = i;
           td.dataset.col = j;
 
-          if (starters.length === 0) {
+          if (!block || block.events.length === 0) {
             td.rowSpan = 1;
             coveredUntil[j] = i + 1;
           } else {
-            let maxSpan = 0;
-            for (let s = 0; s < starters.length; s++) {
-              const span = starters[s].endRow - starters[s].startRow;
-              if (span > maxSpan) maxSpan = span;
-            }
-            td.rowSpan = maxSpan;
-            coveredUntil[j] = i + maxSpan;
+            const totalRows = block.endRow - block.startRow;
+            td.rowSpan = totalRows;
+            coveredUntil[j] = i + totalRows;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'event-row-wrap';
@@ -384,26 +419,34 @@
             wrapper.style.height = '100%';
             wrapper.style.width = '100%';
             wrapper.style.gap = '2px';
-            wrapper.style.alignItems = 'flex-start';
+            wrapper.style.position = 'relative';
 
-            for (let s = 0; s < starters.length; s++) {
-              const item = starters[s];
-              const span = item.endRow - item.startRow;
-              const heightPct = maxSpan > 0 ? (span / maxSpan * 100) : 100;
+            for (let s = 0; s < block.events.length; s++) {
+              const item = block.events[s];
+              const topPct = totalRows > 0 ? ((item.startRow - block.startRow) / totalRows * 100) : 0;
+              const heightPct = totalRows > 0 ? ((item.endRow - item.startRow) / totalRows * 100) : 100;
+              const col = document.createElement('div');
+              col.style.flex = '1';
+              col.style.minWidth = '0';
+              col.style.position = 'relative';
+              col.style.height = '100%';
               const btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'event-btn';
               btn.textContent = item.ev.text || '';
               btn.style.background = item.ev.bg || '#ddd';
-              btn.style.flex = '1';
-              btn.style.minWidth = '0';
+              btn.style.position = 'absolute';
+              btn.style.left = '0';
+              btn.style.right = '0';
+              btn.style.top = topPct + '%';
               btn.style.height = heightPct + '%';
-              btn.style.minHeight = (span * 36) + 'px';
+              btn.style.minHeight = (item.endRow - item.startRow) * 36 + 'px';
               btn.dataset.key = item.keyForBtn;
               btn.dataset.index = item.indexInKey;
               btn.dataset.eventId = item.ev.event_id || '';
               btn.addEventListener('click', function(e) { e.stopPropagation(); openEditModal(this); });
-              wrapper.appendChild(btn);
+              col.appendChild(btn);
+              wrapper.appendChild(col);
             }
             td.appendChild(wrapper);
           }
