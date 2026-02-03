@@ -384,9 +384,12 @@
             wrapper.style.height = '100%';
             wrapper.style.width = '100%';
             wrapper.style.gap = '2px';
+            wrapper.style.alignItems = 'flex-start';
 
             for (let s = 0; s < starters.length; s++) {
               const item = starters[s];
+              const span = item.endRow - item.startRow;
+              const heightPct = maxSpan > 0 ? (span / maxSpan * 100) : 100;
               const btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'event-btn';
@@ -394,6 +397,8 @@
               btn.style.background = item.ev.bg || '#ddd';
               btn.style.flex = '1';
               btn.style.minWidth = '0';
+              btn.style.height = heightPct + '%';
+              btn.style.minHeight = (span * 36) + 'px';
               btn.dataset.key = item.keyForBtn;
               btn.dataset.index = item.indexInKey;
               btn.dataset.eventId = item.ev.event_id || '';
