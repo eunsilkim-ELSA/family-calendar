@@ -23,7 +23,13 @@ MEMBERS = {
     "태현": "#C8E6C9"
 }
 DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"]
-TIMES = [f"{h:02d}:00" for h in range(6, 25)]
+# 30분 단위: 06:00 ~ 24:00 (06:00, 06:30, 07:00, ... 23:30, 24:00)
+TIMES = []
+for h in range(6, 25):
+    for m in (0, 30):
+        if h == 24 and m == 30:
+            break
+        TIMES.append(f"{h:02d}:{m:02d}")
 
 # ----- DB 사용 시 -----
 db_engine = None
@@ -81,23 +87,49 @@ def load_data():
         return {}
 
 
+def parse_start_row(start_str):
+    """시작 시간 문자열(예: 13:30, 13) → 슬롯 인덱스. 입력/드롭다운 모두 지원."""
+    if not start_str or not str(start_str).strip():
+        return 0
+    s = str(start_str).strip()
+    for i, t in enumerate(TIMES):
+        if s == t or (len(s) <= 2 and t.startswith(s.zfill(2) + ":00")):
+            return min(i, len(TIMES) - 1)
+    try:
+        h = int(s)
+        if 6 <= h <= 24:
+            for i, t in enumerate(TIMES):
+                if t == f"{h:02d}:00":
+                    return i
+            return min((h - 6) * 2, len(TIMES) - 1)
+    except ValueError:
+        pass
+    return 0
+
+
 def parse_end_row(end_str, start_row):
-    """종료 시간(예: 16) → 16시에 종료. 채울 슬롯은 range(start_row, end_row)로 end_row 미포함."""
+    """종료 시간(예: 16:00 또는 16) → 해당 시각의 슬롯 인덱스(미포함). 채울 슬롯은 range(start_row, end_row)."""
     if not end_str or not str(end_str).strip():
         return start_row + 1
     end_str = str(end_str).strip()
     for i, t in enumerate(TIMES):
-        if end_str == t or end_str.startswith(t[:2]):
+        if end_str == t or end_str.startswith(t[:2]) or (len(end_str) <= 2 and t.startswith(end_str.zfill(2))):
             if i <= start_row:
                 return start_row + 1
             return i
     try:
         h = int(end_str)
         if 6 <= h <= 24:
-            idx = h - 6
+            # 30분 단위: "16" → 16:00 슬롯 인덱스
+            for i, t in enumerate(TIMES):
+                if t == f"{h:02d}:00":
+                    if i <= start_row:
+                        return start_row + 1
+                    return i
+            idx = (h - 6) * 2
             if idx <= start_row:
                 return start_row + 1
-            return idx
+            return min(idx, len(TIMES))
     except ValueError:
         pass
     return start_row + 1
@@ -117,7 +149,12 @@ def api_get_data():
 def api_add_event():
     payload = request.get_json() or {}
     date_str = payload.get("date_str")
-    time_index = int(payload.get("time_index", 0))
+    # 시작 시간: start_time 문자열(입력) → 파싱, 또는 time_index/start_time_index (숫자)
+    start_time_input = payload.get("start_time", "").strip()
+    if start_time_input:
+        time_index = parse_start_row(start_time_input)
+    else:
+        time_index = int(payload.get("time_index", payload.get("start_time_index", 0)))
     end_time_input = payload.get("end_time", "").strip()
     who = payload.get("who", "아빠")
     content = payload.get("content", "").strip()
@@ -134,7 +171,10 @@ def api_add_event():
 
     event_id = str(time.time()).replace(".", "_")
     time_str = TIMES[time_index]
-    end_display = TIMES[end_row - 1] if end_row > time_index + 1 else None
+    # 표시용 종료시간: 실제 종료 시각(TIMES[end_row]). 13:00~15:00 스케줄이 13:00~14:00로 보이지 않도록 end_row 그대로 사용
+    end_display = None
+    if end_row > time_index and end_row <= len(TIMES):
+        end_display = TIMES[end_row]
     display_text = f"{who}: {content}"
     if end_display and end_display != time_str:
         display_text = f"{who}: {content} ({time_str}~{end_display})"
@@ -235,7 +275,11 @@ def api_update_event():
     who = payload.get("who", "아빠")
     memo = payload.get("memo", "").strip()
     date_str = payload.get("date_str")
-    start_time_index = payload.get("start_time_index")
+    start_time_input = payload.get("start_time", "").strip()
+    if start_time_input:
+        start_time_index = parse_start_row(start_time_input)
+    else:
+        start_time_index = payload.get("start_time_index")
     end_time_input = payload.get("end_time", "").strip()
 
     if who not in MEMBERS:
@@ -256,7 +300,7 @@ def api_update_event():
         end_row = parse_end_row(end_time_input, start_time_index)
         end_row = min(end_row, len(TIMES))
         time_str = TIMES[start_time_index]
-        end_display = TIMES[end_row - 1] if (end_row > start_time_index and end_row <= len(TIMES)) else None
+        end_display = TIMES[end_row] if (end_row <= len(TIMES) and end_row > start_time_index) else None
         display_text = f"{who}: {content}"
         if end_display and end_display != time_str:
             display_text = f"{who}: {content} ({time_str}~{end_display})"

@@ -53,8 +53,10 @@
     table.calendar thead th { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 var(--border); }
     table.calendar th.day-header { background: var(--cell-bg); font-weight: bold; text-align: center; padding: 8px; font-size: 12px; }
     table.calendar th.day-header.today { background: var(--today-bg); }
-    table.calendar th.time-col { width: 64px; background: var(--time-bg); font-size: 11px; text-align: center; padding: 8px 4px; }
-    table.calendar td.cell { min-height: 48px; height: 48px; cursor: pointer; transition: background 0.15s; vertical-align: top; }
+    table.calendar th.time-col { width: 64px; background: var(--time-bg); font-size: 11px; text-align: center; padding: 8px 4px; min-width: 64px; }
+    table.calendar thead th.time-col { position: sticky; top: 0; left: 0; z-index: 3; box-shadow: 2px 0 0 var(--border); }
+    table.calendar tbody th.time-col { position: sticky; left: 0; z-index: 1; background: var(--time-bg); box-shadow: 2px 0 0 var(--border); }
+    table.calendar td.cell { min-height: 36px; height: 36px; cursor: pointer; transition: background 0.15s; vertical-align: top; }
     table.calendar td.cell:hover { background: #e8f4f8; }
     .event-btn {
       display: block; width: 100%; margin: 2px 0; padding: 4px 6px; font-size: 11px; text-align: left;
@@ -66,7 +68,8 @@
     .modal { background: #fff; border-radius: 8px; padding: 20px; min-width: 320px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
     .modal h3 { margin-top: 0; margin-bottom: 16px; font-size: 16px; }
     .modal label { display: block; margin-bottom: 4px; font-size: 13px; }
-    .modal input[type="text"] { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; }
+    .modal input[type="text"], .modal select { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; }
+    .modal select { cursor: pointer; }
     .modal .who-group { margin-bottom: 12px; }
     .modal .who-group label { display: inline-flex; margin-right: 8px; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
     .modal .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
@@ -125,8 +128,12 @@
       <h3 id="modalTitle">일정 추가</h3>
       <label>일정 내용</label>
       <input type="text" id="inputContent" placeholder="예: 영어 수업">
-      <label>종료 시간 (여러 시간 통합 시, 예: 16:00) — 1시간만 쓰려면 비우기</label>
-      <input type="text" id="inputEndTime" placeholder="예: 16:00 또는 16">
+      <label>시작 시간 (선택 또는 직접 입력, 예: 13:30)</label>
+      <input type="text" id="inputStartTime" list="addStartTimeList" placeholder="06:00 ~ 24:00">
+      <datalist id="addStartTimeList"></datalist>
+      <label>종료 시간 (선택 또는 직접 입력, 예: 15:00)</label>
+      <input type="text" id="inputEndTime" list="addEndTimeList" placeholder="06:00 ~ 24:00">
+      <datalist id="addEndTimeList"></datalist>
       <label>메모 (선택)</label>
       <input type="text" id="inputMemo" placeholder="메모">
       <div class="who-group">
@@ -150,10 +157,12 @@
       <input type="text" id="editContent" placeholder="일정 내용">
       <label>메모 (선택)</label>
       <input type="text" id="editMemo" placeholder="메모">
-      <label>시작 시간</label>
-      <input type="text" id="editStartTime" readonly placeholder="시작">
-      <label>종료 시간 (변경 시 입력, 예: 16:00)</label>
-      <input type="text" id="editEndTime" placeholder="예: 16:00">
+      <label>시작 시간 (선택 또는 직접 입력)</label>
+      <input type="text" id="editStartTime" list="editStartTimeList" placeholder="06:00 ~ 24:00">
+      <datalist id="editStartTimeList"></datalist>
+      <label>종료 시간 (선택 또는 직접 입력)</label>
+      <input type="text" id="editEndTime" list="editEndTimeList" placeholder="06:00 ~ 24:00">
+      <datalist id="editEndTimeList"></datalist>
       <div class="who-group">
         <span>작성자:</span>
         <label style="background:#BBDEFB;"><input type="radio" name="editWriter" value="아빠"> 아빠</label>
@@ -173,7 +182,17 @@
 
   <script>
     const DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
-    const TIMES = ["06:00","07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00","24:00"];
+    const DAYS_KR_WEEK = ["월", "화", "수", "목", "금", "토", "일"];
+    const TIMES = (function() {
+      const t = [];
+      for (let h = 6; h <= 24; h++) {
+        for (let m = 0; m < 60; m += 30) {
+          if (h === 24 && m === 30) break;
+          t.push(String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'));
+        }
+      }
+      return t;
+    })();
     const MEMBERS = {"아빠":"#BBDEFB","엄마":"#F8BBD0","수현":"#FFE0B2","태현":"#C8E6C9"};
 
     let viewDate = null;
@@ -185,7 +204,7 @@
     function setViewDateToWeekStart(d) {
       const date = new Date(d);
       const day = date.getDay();
-      const diff = date.getDate() - day;
+      const diff = day === 0 ? date.getDate() - 6 : date.getDate() - (day - 1);
       viewDate = new Date(date.getFullYear(), date.getMonth(), diff, 0, 0, 0, 0);
     }
 
@@ -246,7 +265,7 @@
         d.setDate(d.getDate() + j);
         const th = document.createElement('th');
         th.className = 'day-header' + (isToday(d) ? ' today' : '');
-        th.textContent = DAYS_KR[j] + '(' + formatDate(d).slice(5).replace('-', '/') + ')';
+        th.textContent = DAYS_KR_WEEK[j] + '(' + formatDate(d).slice(5).replace('-', '/') + ')';
         th.setAttribute('data-day', j);
         thead.appendChild(th);
       }
@@ -330,15 +349,49 @@
       }
     }
 
+    function parseTimeToIndex(str) {
+      if (!str || typeof str !== 'string') return 0;
+      var s = str.trim();
+      for (var i = 0; i < TIMES.length; i++) {
+        if (s === TIMES[i]) return i;
+        if (s.length <= 2 && TIMES[i].indexOf(s.padStart(2, '0')) === 0) return i;
+      }
+      var n = parseInt(s, 10);
+      if (!isNaN(n) && n >= 6 && n <= 24) {
+        for (var k = 0; k < TIMES.length; k++) {
+          if (TIMES[k] === String(n).padStart(2, '0') + ':00') return k;
+        }
+        return Math.min((n - 6) * 2, TIMES.length - 1);
+      }
+      return 0;
+    }
+
     function openAddModal(row, col) {
       addCell = { row, col };
       const d = new Date(viewDate);
       d.setDate(d.getDate() + col);
       const dateStr = formatDate(d);
-      document.getElementById('modalTitle').textContent = '일정 추가 — ' + dateStr + ' ' + TIMES[row];
+      document.getElementById('modalTitle').textContent = '일정 추가 — ' + dateStr;
       document.getElementById('inputContent').value = '';
-      document.getElementById('inputEndTime').value = '';
       document.getElementById('inputMemo').value = '';
+      var startInput = document.getElementById('inputStartTime');
+      var endInput = document.getElementById('inputEndTime');
+      var startList = document.getElementById('addStartTimeList');
+      var endList = document.getElementById('addEndTimeList');
+      startList.innerHTML = '';
+      endList.innerHTML = '';
+      for (var i = 0; i < TIMES.length; i++) {
+        var o = document.createElement('option');
+        o.value = TIMES[i];
+        startList.appendChild(o);
+      }
+      for (var j = 0; j < TIMES.length; j++) {
+        var o2 = document.createElement('option');
+        o2.value = TIMES[j];
+        endList.appendChild(o2);
+      }
+      startInput.value = TIMES[row];
+      endInput.value = (row + 1 < TIMES.length) ? TIMES[row + 1] : TIMES[row];
       var headerWriter = document.querySelector('input[name="writer"]:checked');
       if (headerWriter) {
         var modalWriter = document.querySelector('input[name="modalWriter"][value="' + headerWriter.value + '"]');
@@ -357,7 +410,8 @@
       if (!addCell) return;
       const content = document.getElementById('inputContent').value.trim();
       if (!content) return;
-      const endTime = document.getElementById('inputEndTime').value.trim();
+      const startTimeStr = document.getElementById('inputStartTime').value.trim();
+      const endTimeStr = document.getElementById('inputEndTime').value.trim();
       const memo = document.getElementById('inputMemo').value.trim();
       const who = document.querySelector('input[name="modalWriter"]:checked').value;
       const d = new Date(viewDate);
@@ -369,8 +423,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date_str: dateStr,
-          time_index: addCell.row,
-          end_time: endTime,
+          start_time: startTimeStr || undefined,
+          time_index: parseTimeToIndex(startTimeStr),
+          end_time: endTimeStr,
           who: who,
           content: content,
           memo: memo
@@ -399,7 +454,7 @@
       editingIndex = index;
       editingEventId = eventId || null;
 
-      var content = (ev.text || '').replace(/^[^:]+:\s*/, '').replace(/\s*\(\d{2}:\d{2}~\d{2}:\d{2}\)\s*$/, '').trim();
+      var content = (ev.text || '').replace(/^[^:]+:\s*/, '').replace(/\s*\(\d{1,2}:\d{2}~\d{1,2}:\d{2}\)\s*$/, '').trim();
       document.getElementById('editContent').value = content;
       document.getElementById('editMemo').value = ev.memo || '';
       var dateStr = key.substring(0, 10);
@@ -410,10 +465,32 @@
         editingDateStr = dateStr;
         editingStartRow = span.startRow;
         startTimeVal = TIMES[span.startRow] || '';
-        endTimeVal = span.endRow < TIMES.length ? TIMES[span.endRow] : (TIMES[span.endRow - 1] || '');
+        endTimeVal = (span.endRow < TIMES.length) ? TIMES[span.endRow] : TIMES[TIMES.length - 1];
+      } else {
+        var timePart = key.length > 10 ? key.substring(11) : '';
+        var slotRow = TIMES.indexOf(timePart) >= 0 ? TIMES.indexOf(timePart) : 0;
+        editingStartRow = slotRow;
+        startTimeVal = TIMES[slotRow] || '';
+        endTimeVal = slotRow + 1 < TIMES.length ? TIMES[slotRow + 1] : TIMES[slotRow];
       }
-      document.getElementById('editStartTime').value = startTimeVal;
-      document.getElementById('editEndTime').value = endTimeVal;
+      var editStartInput = document.getElementById('editStartTime');
+      var editEndInput = document.getElementById('editEndTime');
+      var editStartList = document.getElementById('editStartTimeList');
+      var editEndList = document.getElementById('editEndTimeList');
+      editStartList.innerHTML = '';
+      editEndList.innerHTML = '';
+      for (var i = 0; i < TIMES.length; i++) {
+        var o = document.createElement('option');
+        o.value = TIMES[i];
+        editStartList.appendChild(o);
+      }
+      for (var j = 0; j < TIMES.length; j++) {
+        var o2 = document.createElement('option');
+        o2.value = TIMES[j];
+        editEndList.appendChild(o2);
+      }
+      editStartInput.value = startTimeVal;
+      editEndInput.value = endTimeVal;
       var editWriterEl = document.querySelector('input[name="editWriter"][value="' + (ev.who || '아빠') + '"]');
       if (editWriterEl) editWriterEl.checked = true;
 
@@ -436,7 +513,8 @@
       if (!content) return;
       const who = document.querySelector('input[name="editWriter"]:checked').value;
       const memo = document.getElementById('editMemo').value.trim();
-      const endTime = document.getElementById('editEndTime').value.trim();
+      const startTimeStr = document.getElementById('editStartTime').value.trim();
+      const endTimeStr = document.getElementById('editEndTime').value.trim();
       const payload = {
         key: editingKey,
         index: editingIndex,
@@ -445,10 +523,11 @@
         who: who,
         memo: memo
       };
-      if (editingEventId && editingDateStr != null && editingStartRow != null) {
+      if (editingEventId && editingDateStr != null) {
         payload.date_str = editingDateStr;
-        payload.start_time_index = editingStartRow;
-        payload.end_time = endTime;
+        payload.start_time = startTimeStr;
+        payload.start_time_index = parseTimeToIndex(startTimeStr);
+        payload.end_time = endTimeStr;
       }
       const res = await fetch('/api/event/update', {
         method: 'POST',
