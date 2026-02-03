@@ -63,6 +63,7 @@
       border: none; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box;
     }
     .event-btn:hover { opacity: 0.9; filter: brightness(0.95); }
+    .event-row-wrap { box-sizing: border-box; min-height: 100%; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; border-radius: 8px; padding: 20px; min-width: 320px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
@@ -305,26 +306,18 @@
       return lanes;
     }
 
-    /** 요일별 최대 lane 수 계산 (1 이상). */
-    function getMaxLanesPerDay() {
-      const maxLanes = [];
-      for (let j = 0; j < 7; j++) {
-        const d = new Date(viewDate);
-        d.setDate(d.getDate() + j);
-        const dateStr = formatDate(d);
-        const events = getEventsForDate(dateStr);
-        if (events.length === 0) {
-          maxLanes.push(1);
-          continue;
-        }
-        const laneIndices = assignLanes(events);
-        maxLanes.push(Math.max(1, Math.max.apply(null, laneIndices) + 1));
+    /** 해당 요일·해당 행에서 시작하는 이벤트 목록 (lane 없이). */
+    function getStartersByRow(events) {
+      const byRow = [];
+      for (let r = 0; r < TIMES.length; r++) byRow[r] = [];
+      for (let k = 0; k < events.length; k++) {
+        const item = events[k];
+        byRow[item.startRow].push({ startRow: item.startRow, endRow: item.endRow, ev: item.ev, keyForBtn: item.keyForBtn, indexInKey: item.indexInKey });
       }
-      return maxLanes;
+      return byRow;
     }
 
     function renderHeaders() {
-      const maxLanes = getMaxLanesPerDay();
       const thead = document.querySelector('#calendarTable thead tr');
       const timeCol = thead.querySelector('.time-col');
       thead.innerHTML = '';
@@ -336,7 +329,6 @@
         th.className = 'day-header' + (isToday(d) ? ' today' : '');
         th.textContent = DAYS_KR_WEEK[j] + '(' + formatDate(d).slice(5).replace('-', '/') + ')';
         th.setAttribute('data-day', j);
-        th.colSpan = maxLanes[j];
         thead.appendChild(th);
       }
       document.getElementById('weekLabel').textContent = getWeekLabel();
@@ -345,27 +337,15 @@
     function renderBody() {
       const tbody = document.getElementById('calendarBody');
       tbody.innerHTML = '';
-      const maxLanes = getMaxLanesPerDay();
       const startEvents = [];
       for (let j = 0; j < 7; j++) {
         const d = new Date(viewDate);
         d.setDate(d.getDate() + j);
         const dateStr = formatDate(d);
         const events = getEventsForDate(dateStr);
-        const laneIndices = assignLanes(events);
-        const byRow = [];
-        for (let r = 0; r < TIMES.length; r++) byRow[r] = [];
-        for (let k = 0; k < events.length; k++) {
-          const item = events[k];
-          byRow[item.startRow].push({ lane: laneIndices[k], startRow: item.startRow, endRow: item.endRow, ev: item.ev, keyForBtn: item.keyForBtn, indexInKey: item.indexInKey });
-        }
-        startEvents.push(byRow);
+        startEvents.push(getStartersByRow(events));
       }
-      const coveredUntil = [];
-      for (let j = 0; j < 7; j++) {
-        coveredUntil[j] = [];
-        for (let L = 0; L < maxLanes[j]; L++) coveredUntil[j][L] = 0;
-      }
+      const coveredUntil = [0, 0, 0, 0, 0, 0, 0];
 
       for (let i = 0; i < TIMES.length; i++) {
         const tr = document.createElement('tr');
@@ -375,44 +355,59 @@
         tr.appendChild(th);
 
         for (let j = 0; j < 7; j++) {
-          for (let L = 0; L < maxLanes[j]; L++) {
-            if (i < coveredUntil[j][L]) continue;
+          if (i < coveredUntil[j]) continue;
 
-            const d = new Date(viewDate);
-            d.setDate(d.getDate() + j);
-            const dateStr = formatDate(d);
-            const starters = startEvents[j][i] || [];
-            const match = starters.find(function(s) { return s.lane === L; });
+          const d = new Date(viewDate);
+          d.setDate(d.getDate() + j);
+          const starters = startEvents[j][i] || [];
+          const td = document.createElement('td');
+          td.className = 'cell';
+          td.dataset.row = i;
+          td.dataset.col = j;
 
-            const td = document.createElement('td');
-            td.className = 'cell';
-            td.dataset.col = j;
-            let rowspan = 1;
-            if (match) {
-              rowspan = match.endRow - match.startRow;
-              td.rowSpan = rowspan;
-              td.dataset.row = i;
+          if (starters.length === 0) {
+            td.rowSpan = 1;
+            coveredUntil[j] = i + 1;
+          } else {
+            let maxSpan = 0;
+            for (let s = 0; s < starters.length; s++) {
+              const span = starters[s].endRow - starters[s].startRow;
+              if (span > maxSpan) maxSpan = span;
+            }
+            td.rowSpan = maxSpan;
+            coveredUntil[j] = i + maxSpan;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'event-row-wrap';
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'row';
+            wrapper.style.height = '100%';
+            wrapper.style.width = '100%';
+            wrapper.style.gap = '2px';
+
+            for (let s = 0; s < starters.length; s++) {
+              const item = starters[s];
               const btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'event-btn';
-              btn.textContent = match.ev.text || '';
-              btn.style.background = match.ev.bg || '#ddd';
-              btn.dataset.key = match.keyForBtn;
-              btn.dataset.index = match.indexInKey;
-              btn.dataset.eventId = match.ev.event_id || '';
+              btn.textContent = item.ev.text || '';
+              btn.style.background = item.ev.bg || '#ddd';
+              btn.style.flex = '1';
+              btn.style.minWidth = '0';
+              btn.dataset.key = item.keyForBtn;
+              btn.dataset.index = item.indexInKey;
+              btn.dataset.eventId = item.ev.event_id || '';
               btn.addEventListener('click', function(e) { e.stopPropagation(); openEditModal(this); });
-              td.appendChild(btn);
-              coveredUntil[j][L] = i + rowspan;
-            } else {
-              td.dataset.row = i;
-              coveredUntil[j][L] = i + 1;
+              wrapper.appendChild(btn);
             }
-            td.addEventListener('click', function(e) {
-              if (e.target.classList.contains('event-btn')) return;
-              openAddModal(parseInt(this.dataset.row, 10), parseInt(this.dataset.col, 10));
-            });
-            tr.appendChild(td);
+            td.appendChild(wrapper);
           }
+
+          td.addEventListener('click', function(e) {
+            if (e.target.classList.contains('event-btn')) return;
+            openAddModal(parseInt(this.dataset.row, 10), parseInt(this.dataset.col, 10));
+          });
+          tr.appendChild(td);
         }
         tbody.appendChild(tr);
       }
